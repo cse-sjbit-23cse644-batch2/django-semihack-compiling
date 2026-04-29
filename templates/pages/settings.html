@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form method="POST" class="card" style="max-width: 800px; margin: 0 auto;">
+    {% csrf_token %}
+    <div class="section-title mb-4">Account Settings</div>
+    
+    <div class="flex items-center gap-6 mb-6 pb-6 border-b" style="border-color: var(--border-color);">
+        <div class="greeting-avatar" style="width:100px;height:100px;font-size:32px;">{{ student.initials }}</div>
+        <div>
+            <div class="font-bold text-lg">{{ student.name }}</div>
+            <div class="text-secondary mb-3">{{ student.student_id }} · {{ student.course }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-2 gap-6">
+        <div>
+            <label class="field-label">Full Name</label>
+            <input class="input" name="name" value="{{ student.name }}">
+        </div>
+        <div>
+            <label class="field-label">Email Address</label>
+            <input class="input" name="email" value="{{ student.email }}">
+        </div>
+        <div>
+            <label class="field-label">Phone Number</label>
+            <input class="input" name="phone" value="{{ student.phone }}">
+        </div>
+        <div>
+            <label class="field-label">Department</label>
+            <input class="input" name="department" value="{{ student.department }}">
+        </div>
+        <div>
+            <label class="field-label">Course</label>
+            <input class="input" name="course" value="{{ student.course }}">
+        </div>
+        <div>
+            <label class="field-label">Student ID</label>
+            <input class="input" value="{{ student.student_id }}" readonly style="background:var(--bg-page); cursor:not-allowed;">
+        </div>
+        <div>
+            <label class="field-label">Current CGPA</label>
+            <input class="input" name="current_cgpa" type="number" step="0.01" min="0" max="10" value="{{ student.current_cgpa }}">
+        </div>
+    </div>
+    
+    <div class="mt-8 pt-6 border-t" style="border-color: var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="reset" class="btn btn-outline">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Account Changes</button>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<!-- Tab logic removed as only Account section remains -->
+{% endblock %}

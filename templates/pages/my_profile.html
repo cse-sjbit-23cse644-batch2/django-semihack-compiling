@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- TOP ROW: Elongated Profile Widget -->
+<div class="card mb-4">
+    <div class="flex items-center gap-10">
+        <div class="greeting-avatar" style="width:120px;height:120px;font-size:40px;flex-shrink:0;">{{ student.initials }}</div>
+        <div class="flex-grow">
+            <div class="font-bold" style="font-size:28px;">{{ student.name }}</div>
+            <div class="text-secondary" style="font-size:16px;margin-top:4px;">
+                {{ student.course }} · Semester {{ student.semester }}
+            </div>
+            <div class="mt-4 flex gap-4">
+                <span class="pill muted">Roll Number: {{ student.roll_no }}</span>
+                <span class="pill info">Current CGPA: {{ current_cgpa }}</span>
+            </div>
+        </div>
+        <div class="flex flex-col gap-2">
+            <a href="{% url 'settings_page' %}" class="btn btn-outline" style="text-align:center; padding:10px 24px;">Account Settings</a>
+        </div>
+    </div>
+</div>
+
+<!-- BOTTOM ROW: Personal Info and Subjects Side-by-Side -->
+<div class="grid" style="grid-template-columns: 1fr 1.5fr; gap: 20px; align-items: start;">
+    <!-- Personal Info -->
+    <div class="card">
+        <div class="flex justify-between items-center mb-4">
+            <div class="section-title">Personal Information</div>
+        </div>
+        <div class="flex flex-col gap-4">
+            <div class="field-row"><div class="field-label">Full Name</div><div class="field-value">{{ student.name }}</div></div>
+            <div class="field-row"><div class="field-label">Email</div><div class="field-value">{{ student.email }}</div></div>
+            <div class="field-row"><div class="field-label">Phone</div><div class="field-value">{{ student.phone }}</div></div>
+            <div class="field-row"><div class="field-label">Department</div><div class="field-value">{{ student.department }}</div></div>
+            <div class="field-row"><div class="field-label">Admission Year</div><div class="field-value">{{ student.admission_year }}</div></div>
+        </div>
+    </div>
+
+    <!-- Subjects Enrolled -->
+    <div class="card">
+        <div class="section-title mb-4">Subjects Enrolled</div>
+        <div class="overflow-auto">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Subject</th><th class="text-center">Credits</th><th class="text-center">Marks</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in subjects %}
+                    <tr>
+                        <td>{{ s.name }}</td>
+                        <td class="text-center">{{ s.credits }}</td>
+                        <td class="text-center font-bold">{{ s.marks }}/100</td>
+                        <td>
+                            {% if s.marks >= 40 %}
+                            <span class="pill success">Pass</span>
+                            {% else %}
+                            <span class="pill danger">Fail</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 980px) {
+    .page-content > .grid[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+}
+</style>
+{% endblock %}

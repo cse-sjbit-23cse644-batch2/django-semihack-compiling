@@ -1,0 +1,6 @@
+student_id,student_name,department,semester,subject_code,subject_name,credits,internal_marks,external_marks,attendance_percentage,assignment_score
+2021CS042,Akanksha Tiwary,Computer Science,6,CS301,Database Management Systems,4,30,48,92,18
+2021CS042,Akanksha Tiwary,Computer Science,6,CS302,Operating Systems,4,12,40,75,10
+2021CS042,Akanksha Tiwary,Computer Science,6,CS303,Design & Analysis of Algorithms,4,25,46,88,15
+2021CS042,Akanksha Tiwary,Computer Science,6,CS304,Computer Networks,3,20,44,85,14
+2021CS042,Akanksha Tiwary,Computer Science,6,CS305,Web Technology,3,32,50,95,19

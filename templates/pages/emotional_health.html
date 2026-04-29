@@ -1,0 +1,484 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="wellness-banner mb-4">
+    <div style="flex:1;min-width:0;">
+        <div class="label-secondary" style="color:rgba(255,255,255,0.85);">Overall Wellness Score</div>
+        <div class="score-num">
+            <span id="wellnessScoreNum" data-countup="{{ wellness_score }}">0</span> / 100
+        </div>
+        <div class="mt-2">
+            <span class="pill success" id="wellnessPill">{{ wellness_label }}</span>
+        </div>
+        <div style="opacity:0.9;font-size:13px;margin-top:6px;" id="wellnessSubline">
+            {% if wellness_label == "Excellent" %}You're in great shape — keep it going! 🌟
+            {% elif wellness_label == "Good" %}Keep maintaining your healthy habits!
+            {% elif wellness_label == "Fair" %}A few tweaks can improve how you feel.
+            {% else %}Let's work on building better days together.
+            {% endif %}
+        </div>
+
+        {# Mood trail — hidden until ≥3 tagged messages exist #}
+        {% if mood_trail_json != "[]" %}
+        <div class="mood-trail mt-3" id="moodTrail"></div>
+        {% else %}
+        <div class="mood-trail mt-3" id="moodTrail" style="display:none;"></div>
+        {% endif %}
+    </div>
+    <div class="wellness-face" id="wellnessFace">{% if wellness_label == "Excellent" %}🤩{% elif wellness_label == "Good" %}😊{% elif wellness_label == "Fair" %}😐{% else %}😔{% endif %}</div>
+</div>
+
+<!-- AI Wellness Coach (chat) -->
+<div class="card mb-4 chat-card">
+    <div class="flex items-center justify-between mb-3">
+        <div>
+            <div class="section-title">AI Wellness Coach</div>
+            <div class="text-secondary" style="font-size:12px;">Share what's on your mind — I'll detect the issue and suggest the best next steps.</div>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if chat_history %}
+            <a href="/emotional-health/chat/export.pdf" class="btn btn-outline" style="padding:6px 12px;font-size:12px;text-decoration:none;">⬇ Export PDF</a>
+            <button id="chatClear" class="btn btn-outline" style="padding:6px 12px;font-size:12px;">Clear history</button>
+            {% endif %}
+            <span class="pill" style="background:#EEF2FF;color:#6C3CE1;">● Online</span>
+        </div>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+        {% if not chat_history %}
+        <div class="chat-msg ai">
+            <div class="chat-avatar ai">AI</div>
+            <div class="chat-bubble ai">
+                Hi {{ student.name|cut:" Tiwary" }} 👋 I'm your wellness coach. Tell me what's bothering you — anxiety before exams, no motivation, sleep trouble, or anything else — and I'll help you figure out what to do.
+            </div>
+        </div>
+        {% else %}
+            {% for m in chat_history %}
+            <div class="chat-msg {% if m.role == 'user' %}user{% else %}ai{% endif %}">
+                {% if m.role == 'user' %}
+                    <div class="chat-bubble user">{{ m.content|linebreaksbr }}<div class="chat-time">{{ m.time }}</div></div>
+                    <div class="chat-avatar user">{{ student.initials }}</div>
+                {% else %}
+                    <div class="chat-avatar ai">AI</div>
+                    <div class="chat-bubble ai">{{ m.content|linebreaksbr }}<div class="chat-time">{{ m.time }}</div></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <div class="chat-quick mt-3">
+        <button class="chip-btn" data-prompt="I feel really anxious about my upcoming end-sem exams.">Exam anxiety</button>
+        <button class="chip-btn" data-prompt="I'm having trouble sleeping — I keep scrolling till 2am.">Sleep trouble</button>
+        <button class="chip-btn" data-prompt="I just have no motivation to study these days.">No motivation</button>
+        <button class="chip-btn" data-prompt="I can't focus for more than 10 minutes at a time.">Can't focus</button>
+    </div>
+
+    <form id="chatForm" class="chat-input mt-3">
+        <textarea id="chatInput" rows="1" placeholder="Describe what you're feeling… (Press Enter to send, Shift+Enter for new line)" required></textarea>
+        <button type="submit" class="btn btn-primary" id="chatSend">Send</button>
+    </form>
+</div>
+
+
+
+<div class="grid grid-2">
+    <!-- Input panel -->
+    <div class="card">
+        <div class="section-title mb-3">Update Your Data</div>
+
+        <div class="mb-4">
+            <div class="flex justify-between mb-2"><span class="field-label" style="margin:0;">Study Hours / Day</span><span class="font-semi" id="vStudy">7</span></div>
+            <input type="range" min="0" max="16" step="1" value="7" class="slider" id="sliderStudy" data-target="#vStudy">
+        </div>
+        <div class="mb-4">
+            <div class="flex justify-between mb-2"><span class="field-label" style="margin:0;">Sleep Hours</span><span class="font-semi" id="vSleep">6</span></div>
+            <input type="range" min="0" max="12" step="1" value="6" class="slider" id="sliderSleep" data-target="#vSleep">
+        </div>
+        <div class="mb-4">
+            <div class="flex justify-between mb-2"><span class="field-label" style="margin:0;">Phone Screen Time</span><span class="font-semi" id="vPhone">4</span></div>
+            <input type="range" min="0" max="12" step="1" value="4" class="slider" id="sliderPhone" data-target="#vPhone">
+        </div>
+        <div class="mb-4">
+            <div class="flex justify-between mb-2"><span class="field-label" style="margin:0;">Gaming Hours</span><span class="font-semi" id="vGame">2</span></div>
+            <input type="range" min="0" max="8" step="1" value="2" class="slider" id="sliderGame" data-target="#vGame">
+        </div>
+        <div class="mb-4">
+            <div class="flex justify-between mb-2"><span class="field-label" style="margin:0;">Social Media Hours</span><span class="font-semi" id="vSocial">3</span></div>
+            <input type="range" min="0" max="8" step="1" value="3" class="slider" id="sliderSocial" data-target="#vSocial">
+        </div>
+
+        <div class="mb-4">
+            <div class="field-label">Stress Level</div>
+            <div class="flex gap-2" id="stressStars" style="font-size:22px;cursor:pointer;">
+                <span data-star="1">★</span><span data-star="2">★</span><span data-star="3">☆</span><span data-star="4">☆</span><span data-star="5">☆</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btnAnalyse">Analyse Impact</button>
+    </div>
+
+    <!-- Radar chart -->
+    <div class="card">
+        <div class="section-title mb-3">Behavioral Profile</div>
+        <canvas id="radarChart" height="240"></canvas>
+        <div class="mt-3 text-center"><span class="pill warning" id="impactLevelPill">Impact Level: Medium</span></div>
+
+        <div class="mt-4 flex flex-col gap-3" id="insightContainer">
+            {% for ins in insights %}
+            <div class="insight-card" style="border-left-color:{{ ins.color }};">{{ ins.text }}</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.mood-trail {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.mood-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    flex-shrink: 0;
+}
+.mood-dot:hover {
+    transform: scale(1.55);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    z-index: 10;
+}
+.mood-dot .dot-tip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1A1A2E;
+    color: #fff;
+    font-size: 11px;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 20;
+    line-height: 1.4;
+}
+.mood-dot .dot-tip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1A1A2E;
+}
+.mood-dot:hover .dot-tip { display: block; }
+/* Pulse animation for newly added dot */
+@keyframes dotPulse {
+    0%   { transform: scale(0.4); opacity: 0; }
+    60%  { transform: scale(1.4); }
+    100% { transform: scale(1);   opacity: 1; }
+}
+.mood-dot.fresh { animation: dotPulse 0.4s ease forwards; }
+</style>
+<script>
+    const radar = {{ radar_json|safe }};
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    let radarChart = new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+            labels: radar.labels,
+            datasets: [{
+                data: radar.values,
+                borderColor: '#6C3CE1',
+                backgroundColor: 'rgba(108,60,225,0.18)',
+                pointBackgroundColor: '#6C3CE1',
+                pointRadius: 4,
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                r: { beginAtZero: true, max: 10, ticks: { display: false }, grid: { color: '#E5E7EB' }, pointLabels: { font: { size: 11 } } }
+            },
+            animation: { duration: 600 }
+        }
+    });
+
+    // Slider value updates
+    document.querySelectorAll('.slider').forEach(s => {
+        s.addEventListener('input', () => {
+            const target = document.querySelector(s.dataset.target);
+            if (target) target.textContent = s.value;
+        });
+    });
+
+    // Stress stars logic
+    let currentStress = 2; 
+    const stars = document.querySelectorAll('#stressStars span');
+    stars.forEach(s => s.addEventListener('click', () => {
+        currentStress = parseInt(s.dataset.star);
+        stars.forEach((x, i) => x.textContent = i < currentStress ? '★' : '☆');
+    }));
+
+    // Analyse Impact Logic
+    document.getElementById('btnAnalyse').addEventListener('click', function() {
+        const study = parseFloat(document.getElementById('sliderStudy').value);
+        const sleep = parseFloat(document.getElementById('sliderSleep').value);
+        const phone = parseFloat(document.getElementById('sliderPhone').value);
+        const game = parseFloat(document.getElementById('sliderGame').value);
+        const social = parseFloat(document.getElementById('sliderSocial').value);
+
+        // Map values to 0-10 scale for Radar (Proportional)
+        const studyScore = Math.min(10, study / 1.6);
+        const sleepScore = Math.min(10, sleep / 1.2);
+        const phoneScore = Math.min(10, phone / 1.2);
+        const gameScore = Math.min(10, game / 0.8);
+        const socialScore = Math.min(10, social / 0.8);
+        const stressScore = Math.min(10, currentStress * 2);
+
+        const newValues = [studyScore, sleepScore, phoneScore, gameScore, socialScore, stressScore];
+        
+        // Update Chart
+        radarChart.data.datasets[0].data = newValues.map(v => v.toFixed(1));
+        radarChart.update();
+
+        // Update Impact Level (Balance Score)
+        // High consumption/stress lowers the balance score
+        const balanceScore = (studyScore + sleepScore + (10-phoneScore) + (10-gameScore) + (10-socialScore) + (10-stressScore)) / 6;
+        const pill = document.getElementById('impactLevelPill');
+        if (balanceScore >= 7.5) {
+            pill.innerText = "Impact Level: Healthy";
+            pill.className = "pill success";
+        } else if (balanceScore >= 5) {
+            pill.innerText = "Impact Level: Balanced";
+            pill.className = "pill warning";
+        } else {
+            pill.innerText = "Impact Level: Critical";
+            pill.className = "pill danger";
+        }
+
+        // Optional: Simple vibration or feedback
+        this.innerText = "Analyse Updated!";
+        setTimeout(() => this.innerText = "Analyse Impact", 2000);
+    });
+
+    // -------- Mood Trail --------
+    (function() {
+        const trailEl = document.getElementById('moodTrail');
+        let trailData = {{ mood_trail_json|safe }};
+
+        const LABEL_COLOURS = {
+            calm: '#22C55E', focused: '#22C55E', hopeful: '#22C55E',
+            stressed: '#F59E0B', anxious: '#F97316',
+            sad: '#EF4444', overwhelmed: '#EF4444',
+        };
+
+        function renderTrail(data, freshIndex) {
+            if (!data || !data.length) return;
+            trailEl.style.display = 'flex';
+            trailEl.innerHTML = '';
+            data.forEach((d, i) => {
+                const dot = document.createElement('div');
+                dot.className = 'mood-dot' + (i === freshIndex ? ' fresh' : '');
+                dot.style.background = d.colour || '#E5E7EB';
+                const tipText = d.label
+                    ? `${d.date} · ${d.label} (${d.score >= 0 ? '+' : ''}${d.score})`
+                    : `${d.date} · No data`;
+                dot.innerHTML = `<div class="dot-tip">${tipText}</div>`;
+                trailEl.appendChild(dot);
+            });
+        }
+        renderTrail(trailData, -1);
+
+
+
+        // Patch _updateMoodTrail to also refresh chart
+        const _origUpdate = window._updateMoodTrail;
+
+        // Called from chat after each AI reply
+        window._updateMoodTrail = function(mood) {
+            if (!mood || !mood.label) return;
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-US', {month:'short', day:'2-digit'});
+            const colour = LABEL_COLOURS[mood.label.toLowerCase()] || '#6B7280';
+            // Find today's slot in the trail and update it
+            let updated = false;
+            trailData = trailData.map(d => {
+                if (d.date === dateStr) {
+                    updated = true;
+                    return {...d, label: mood.label.charAt(0).toUpperCase()+mood.label.slice(1), colour, score: mood.score};
+                }
+                return d;
+            });
+            if (!updated) {
+                trailData.push({date: dateStr, label: mood.label.charAt(0).toUpperCase()+mood.label.slice(1), colour, score: mood.score});
+            }
+            renderTrail(trailData, trailData.findIndex(d => d.date === dateStr));
+
+        };
+
+        // Live wellness score updater
+        window._updateWellnessScore = function(newScore, newLabel) {
+            const scoreEl = document.getElementById('wellnessScoreNum');
+            const pillEl  = document.getElementById('wellnessPill');
+            const faceEl  = document.getElementById('wellnessFace');
+            if (!scoreEl) return;
+            const start = parseInt(scoreEl.textContent) || 0;
+            const end   = newScore;
+            const dur   = 800;
+            const t0    = performance.now();
+            (function step(now) {
+                const p = Math.min((now - t0) / dur, 1);
+                scoreEl.textContent = Math.round(start + (end - start) * p);
+                if (p < 1) requestAnimationFrame(step);
+            })(t0);
+            if (pillEl) {
+                pillEl.textContent = newLabel;
+                pillEl.className = 'pill ' + ({'Excellent':'success','Good':'success','Fair':'warning','Low':'danger'}[newLabel] || 'success');
+            }
+            if (faceEl) {
+                faceEl.textContent = {'Excellent':'🤩','Good':'😊','Fair':'😐','Low':'😔'}[newLabel] || '😊';
+            }
+        };
+    })();
+
+    // -------- AI Wellness Chat --------
+    (function() {
+        const win = document.getElementById('chatWindow');
+        const form = document.getElementById('chatForm');
+        const input = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('chatSend');
+        const chips = document.querySelectorAll('.chip-btn');
+        const clearBtn = document.getElementById('chatClear');
+        const csrfToken = '{{ csrf_token }}';
+        const history = {{ chat_history_json|safe }};
+        win.scrollTop = win.scrollHeight;
+
+        function escapeHtml(s) {
+            return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        function addMessage(role, text) {
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-msg ' + role;
+            const avatar = document.createElement('div');
+            avatar.className = 'chat-avatar ' + role;
+            avatar.textContent = role === 'ai' ? 'AI' : '{{ student.initials }}';
+            const bubble = document.createElement('div');
+            bubble.className = 'chat-bubble ' + role;
+            bubble.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+            if (role === 'user') {
+                wrap.appendChild(bubble);
+                wrap.appendChild(avatar);
+            } else {
+                wrap.appendChild(avatar);
+                wrap.appendChild(bubble);
+            }
+            win.appendChild(wrap);
+            win.scrollTop = win.scrollHeight;
+            return bubble;
+        }
+
+        function addTyping() {
+            const wrap = document.createElement('div');
+            wrap.className = 'chat-msg ai';
+            wrap.id = 'chatTyping';
+            wrap.innerHTML = '<div class="chat-avatar ai">AI</div><div class="chat-bubble ai typing"><span></span><span></span><span></span></div>';
+            win.appendChild(wrap);
+            win.scrollTop = win.scrollHeight;
+        }
+        function removeTyping() {
+            const t = document.getElementById('chatTyping');
+            if (t) t.remove();
+        }
+
+        async function send(text) {
+            if (!text.trim()) return;
+            addMessage('user', text);
+            history.push({role: 'user', content: text});
+            input.value = '';
+            input.style.height = 'auto';
+            sendBtn.disabled = true;
+            addTyping();
+
+            try {
+                const res = await fetch('/emotional-health/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({message: text, history: history.slice(0, -1)}),
+                });
+                removeTyping();
+                const data = await res.json();
+                if (!res.ok) {
+                    addMessage('ai', "Sorry, I couldn't reach the wellness coach right now. " + (data.error || ''));
+                } else {
+                    addMessage('ai', data.reply || "(no response)");
+                    history.push({role: 'assistant', content: data.reply || ''});
+                    // Update mood trail + wellness score live
+                    if (data.mood && data.mood.label) {
+                        window._updateMoodTrail && window._updateMoodTrail(data.mood);
+                        // Recompute approximate score client-side for instant feedback
+                        const s = data.mood.score || 0;
+                        const approxScore = Math.round(Math.min(100, Math.max(0, 50 + s * 50)));
+                        const approxLabel = approxScore >= 80 ? 'Excellent' : approxScore >= 60 ? 'Good' : approxScore >= 40 ? 'Fair' : 'Low';
+                        window._updateWellnessScore && window._updateWellnessScore(approxScore, approxLabel);
+                    }
+                }
+            } catch (e) {
+                removeTyping();
+                addMessage('ai', "Network error — please try again.");
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
+            }
+        }
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            send(input.value);
+        });
+
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.requestSubmit();
+            }
+        });
+
+        // Auto-grow textarea
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+        });
+
+        chips.forEach(c => c.addEventListener('click', () => send(c.dataset.prompt)));
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', async () => {
+                if (!confirm('Clear all chat history? This cannot be undone.')) return;
+                try {
+                    await fetch('/emotional-health/chat/', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+                        body: JSON.stringify({clear: true}),
+                    });
+                    location.reload();
+                } catch (e) { alert('Could not clear history.'); }
+            });
+        }
+    })();
+</script>
+{% endblock %}

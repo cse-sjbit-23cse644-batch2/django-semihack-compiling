@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- TOP ROW -->
+<div class="grid grid-3 stat-card-row mb-4">
+    <div class="stat-card">
+        <span class="label">Current CGPA</span>
+        <span class="value" data-countup="{{ current_cgpa }}" data-countup-decimals="2">0</span>
+        <span class="pill success">Good Progress</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Target CGPA</span>
+        <span class="value" data-countup="{{ target_cgpa }}" data-countup-decimals="2">0</span>
+        <span class="pill info">On Track</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Required Avg Marks</span>
+        <span class="value" data-countup="{{ required_avg }}">0</span>
+        <span class="sub">across remaining subjects</span>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <!-- LEFT — Target setter -->
+    <div class="card">
+        <div class="section-title mb-3">Set Your Target</div>
+        <div class="text-secondary" style="font-size:13px;">I want to graduate with</div>
+        <div class="text-purple font-bold" style="font-size:40px;margin:4px 0 16px;">
+            <span id="cgpaValue">8.50</span> CGPA
+        </div>
+        <div class="slider-wrap">
+            <input type="range" min="6" max="10" step="0.1" value="8.5" class="slider" data-target="#cgpaValue" id="planSlider">
+            <div class="slider-ticks">
+                <span>6.0</span><span>7.0</span><span>8.0</span><span>9.0</span><span>10.0</span>
+            </div>
+        </div>
+
+        <div class="tabs mt-4">
+            <button class="tab active" data-scenario="minimum">Minimum Effort</button>
+            <button class="tab" data-scenario="balanced">Balanced</button>
+            <button class="tab" data-scenario="best">Best Case</button>
+        </div>
+
+        <div class="mt-4">
+            <table class="data-table" id="scenarioTable">
+                <thead>
+                    <tr><th>Subject</th><th>Credits</th><th>Required Marks</th><th>Feasibility</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <button class="btn btn-primary btn-block mt-4" id="recalcBtn">Recalculate Plan</button>
+    </div>
+
+    <!-- RIGHT — Scenario comparison -->
+    <div class="card">
+        <div class="section-title mb-3">Scenario Comparison</div>
+        <div style="position:relative;height:280px;">
+            <canvas id="scenarioChart"></canvas>
+        </div>
+        <div class="mt-4">
+            <div class="section-subtitle mb-2 font-semi" style="color:var(--text-primary);">Feasibility Summary</div>
+            <div class="metric-row"><span>Minimum Effort</span><span class="pill success">5 / 5 Feasible</span></div>
+            <div class="metric-row"><span>Balanced</span><span class="pill warning">4 / 5 Feasible</span></div>
+            <div class="metric-row"><span>Best Case</span><span class="pill danger">2 / 5 Feasible</span></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const scenarios = {{ scenarios_json|safe }};
+
+    function feasibilityPill(label) {
+        if (label === 'Easy') return '<span class="pill success">Easy</span>';
+        if (label === 'Moderate') return '<span class="pill warning">Moderate</span>';
+        if (label === 'Hard') return '<span class="pill danger">Hard</span>';
+        return '<span class="pill muted">' + label + '</span>';
+    }
+
+    function marksColor(m) {
+        if (m > 100) return 'text-danger';
+        if (m > 80) return 'text-danger';
+        if (m > 60) return 'text-warning';
+        return 'text-success';
+    }
+
+    function renderScenario(key) {
+        const rows = scenarios[key];
+        const tbody = document.querySelector('#scenarioTable tbody');
+        tbody.innerHTML = rows.map(r => {
+            const marksCell = r.marks > 100
+                ? `<span class="text-danger" style="text-decoration:line-through;">Not Feasible</span>`
+                : `<span class="font-bold ${marksColor(r.marks)}">${r.marks}</span>`;
+            return `<tr><td>${r.name}</td><td>${r.credits}</td><td>${marksCell}</td><td>${feasibilityPill(r.feasibility)}</td></tr>`;
+        }).join('');
+    }
+
+    document.querySelectorAll('.tab').forEach(t => {
+        t.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            t.classList.add('active');
+            renderScenario(t.dataset.scenario);
+        });
+    });
+    renderScenario('minimum');
+
+    // Recalculate logic
+    const recalcBtn = document.getElementById('recalcBtn');
+    const planSlider = document.getElementById('planSlider');
+
+    recalcBtn.addEventListener('click', async () => {
+        const target = parseFloat(planSlider.value);
+        recalcBtn.disabled = true;
+        recalcBtn.textContent = 'Calculating & Saving...';
+
+        try {
+            const res = await fetch('/cgpa-planner/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ target_cgpa: target })
+            });
+            
+            if (res.ok) {
+                // Update scenarios based on target
+                const factor = (target - 8.5) * 15;
+                Object.keys(scenarios).forEach(key => {
+                    scenarios[key].forEach(sub => {
+                        sub.marks = Math.min(100, Math.max(40, Math.round(sub.base_marks + factor)));
+                    });
+                });
+
+                // Re-render table
+                const activeTab = document.querySelector('.tab.active');
+                renderScenario(activeTab.dataset.scenario);
+                
+                // Update Chart
+                chart.data.datasets[0].data = scenarios.minimum.map(r => r.marks);
+                chart.data.datasets[1].data = scenarios.balanced.map(r => r.marks);
+                chart.data.datasets[2].data = scenarios.best.map(r => r.marks);
+                chart.update();
+
+                // Update Top Stat Card
+                const targetStat = document.querySelector('.stat-card:nth-child(2) .value');
+                if (targetStat) targetStat.textContent = target.toFixed(2);
+
+                recalcBtn.textContent = 'Plan Updated!';
+            }
+        } catch (e) {
+            console.error(e);
+            recalcBtn.textContent = 'Error Saving';
+        } finally {
+            setTimeout(() => {
+                recalcBtn.disabled = false;
+                recalcBtn.textContent = 'Recalculate Plan';
+            }, 1000);
+        }
+    });
+
+    // Scenario comparison chart
+    const subjects = scenarios.minimum.map(r => r.name);
+    const chart = new Chart(document.getElementById('scenarioChart'), {
+        type: 'bar',
+        data: {
+            labels: subjects,
+            datasets: [
+                { label: 'Minimum', data: scenarios.minimum.map(r => r.marks), backgroundColor: '#22C55E', borderRadius: 6 },
+                { label: 'Balanced', data: scenarios.balanced.map(r => r.marks), backgroundColor: '#3B82F6', borderRadius: 6 },
+                { label: 'Best Case', data: scenarios.best.map(r => r.marks), backgroundColor: '#6C3CE1', borderRadius: 6 },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600 },
+            plugins: { legend: { position: 'bottom' } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, max: 100, grid: { color: '#F3F4F6' } },
+            }
+        }
+    });
+</script>
+{% endblock %}

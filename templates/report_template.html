@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GradeDNA Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #4f46e5;
+            margin: 0;
+            font-size: 28px;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            color: #666;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #1e293b;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+        .alert {
+            padding: 15px;
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+            margin-bottom: 20px;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            margin-top: 50px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>GradeDNA AI</h1>
+        <p>Advanced Result Analytics & Performance Intelligence Report</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Student Profile</h2>
+        <table>
+            <tr>
+                <th>Name</th>
+                <td>{{ student_name }}</td>
+                <th>Student ID</th>
+                <td>{{ student_id }}</td>
+            </tr>
+            <tr>
+                <th>Overall CGPA</th>
+                <td>{{ overall_cgpa }}</td>
+                <th>Status</th>
+                <td><strong>Needs Intervention</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Performance Summary</h2>
+        <p><strong>Pass Percentage:</strong> {{ pass_percentage }}%</p>
+        <p><strong>Fail Percentage:</strong> {{ fail_percentage }}%</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Smart Backlog Prevention Alerts</h2>
+        <div class="alert">
+            <p style="margin: 0;"><strong>High Risk Subjects Identified:</strong></p>
+            <ul style="margin-top: 5px; margin-bottom: 0;">
+                {% for subject in high_risk_subjects %}
+                    <li>{{ subject }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">AI Intervention Recommendations</h2>
+        <ul>
+            <li>Focus primarily on {{ high_risk_subjects.0 }} internal assignments.</li>
+            <li>Address emotional fatigue by improving sleep schedule to minimum 7 hours.</li>
+            <li>Review twin class historical data: previous cohorts solved this by attending extra tutorial sessions for Operating Systems.</li>
+        </ul>
+    </div>
+
+    <div class="footer">
+        Generated automatically by GradeDNA AI | The Academic Survival System
+    </div>
+
+    <script>
+        // Auto-trigger print dialog when the page loads
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

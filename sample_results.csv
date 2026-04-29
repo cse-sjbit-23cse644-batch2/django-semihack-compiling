@@ -1,0 +1,17 @@
+student_id,student_name,department,semester,subject_code,subject_name,credits,internal_marks,external_marks,attendance_percentage,assignment_score
+CS2024-001,Aarav Sharma,Computer Science,4,CS401,Operating Systems,4,35,52,85,9.5
+CS2024-001,Aarav Sharma,Computer Science,4,CS402,Database Systems,4,32,45,88,8.0
+CS2024-001,Aarav Sharma,Computer Science,4,CS403,Algorithms,3,38,55,90,10.0
+CS2024-002,Priya Patel,Computer Science,4,CS401,Operating Systems,4,28,40,76,7.5
+CS2024-002,Priya Patel,Computer Science,4,CS402,Database Systems,4,15,25,65,4.0
+CS2024-002,Priya Patel,Computer Science,4,CS403,Algorithms,3,30,42,80,8.0
+CS2024-003,Rahul Verma,Computer Science,4,CS401,Operating Systems,4,40,58,95,10.0
+CS2024-003,Rahul Verma,Computer Science,4,CS402,Database Systems,4,39,59,98,9.5
+CS2024-003,Rahul Verma,Computer Science,4,CS403,Algorithms,3,37,56,92,9.0
+CS2024-004,Neha Singh,Computer Science,4,CS401,Operating Systems,4,12,18,55,3.0
+CS2024-004,Neha Singh,Computer Science,4,CS402,Database Systems,4,20,35,70,5.5
+CS2024-004,Neha Singh,Computer Science,4,CS403,Algorithms,3,18,22,60,4.0
+CS2024-005,Vikram Reddy,Computer Science,4,CS401,Operating Systems,4,25,38,82,7.0
+CS2024-005,Vikram Reddy,Computer Science,4,CS402,Database Systems,4,30,48,85,8.5
+CS2024-005,Vikram Reddy,Computer Science,4,CS403,Algorithms,3,28,45,80,7.5
+CS2024-ERR,Invalid Student,Computer Science,4,CS401,Operating Systems,4,45,80,-10,12.0

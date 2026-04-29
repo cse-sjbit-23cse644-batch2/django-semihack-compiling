@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="grid grid-4 stat-card-row mb-4">
+    <div class="stat-card">
+        <span class="label">Class Rank</span>
+        <span class="value" id="stat-rank">--</span>
+        <span class="sub" id="stat-total">out of --</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Percentile</span>
+        <span class="value" id="stat-percentile">--</span>
+        <span class="pill success" id="stat-band">Upload Data</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Avg Delta (±)</span>
+        <span class="value" id="stat-delta">--</span>
+        <span class="sub">vs class average</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Confidence Score</span>
+        <span class="value" style="font-size:24px;" id="stat-confidence">0%</span>
+        <span class="pill purple">Dynamic</span>
+    </div>
+</div>
+
+<div class="card mb-4" style="border: 2px dashed var(--border-color); background: var(--bg-page); padding: 20px; text-align: center;">
+    <div class="flex justify-between items-center">
+        <div style="text-align: left;">
+            <div class="font-bold">Upload Class Dataset</div>
+            <div class="text-secondary text-xs">Upload a CSV with class marks to see your real-time ranking and comparison.</div>
+        </div>
+        <div class="flex gap-3">
+            <a href="/static/data/class_full_batch_report.csv" download class="btn btn-outline" style="font-size:12px;">Download Template</a>
+            <button class="btn btn-primary" onclick="document.getElementById('classCsvInput').click()">Upload CSV</button>
+            <input type="file" id="classCsvInput" hidden accept=".csv">
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div class="card">
+        <div class="flex justify-between items-center mb-3">
+            <div class="section-title">Performance vs Class</div>
+        </div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Subject</th><th>You</th><th>Class Avg</th><th>Delta</th><th>σ (Std)</th><th>Rank</th></tr>
+                </thead>
+                <tbody id="perfTableBody">
+                    <tr><td colspan="6" class="text-center text-secondary py-5">Upload class data to populate this table</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+        <div class="card">
+            <div class="section-title mb-3">Your Score vs Class Avg</div>
+            <canvas id="cmpChart" height="220"></canvas>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let cmpChart = null;
+    const userSubjects = {{ rows_json|safe }}; // From ResultRecord
+    const userName = "{{ student.name }}";
+
+    // Initialize Chart
+    function initChart(labels = [], userData = [], avgData = []) {
+        const ctx = document.getElementById('cmpChart');
+        if (cmpChart) cmpChart.destroy();
+        
+        cmpChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'You', data: userData, backgroundColor: '#6C3CE1', borderRadius: 4 },
+                    { label: 'Class Avg', data: avgData, backgroundColor: '#D1D5DB', borderRadius: 4 },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: true, aspectRatio: 1.8,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+                scales: { 
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } }, 
+                    y: { beginAtZero: true, max: 100, grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 } } } 
+                },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    // Handle File Upload
+    document.getElementById('classCsvInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const csv = event.target.result;
+            processClassData(csv);
+        };
+        reader.readAsText(file);
+    });
+
+    function processClassData(csv) {
+        const lines = csv.split('\n').map(l => l.trim().split(',')).filter(l => l.length > 2);
+        if (lines.length < 2) return;
+
+        const headers = lines[0].map(h => h.trim().replace(/^"|"$/g, ''));
+        const data = lines.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((h, i) => obj[h] = row[i]);
+            return obj;
+        });
+
+        // Identify matching subjects
+        const availableSubjects = headers.filter(h => h !== 'Student Name' && h !== 'CGPA');
+        const results = [];
+        let totalDelta = 0;
+        let totalRank = 0;
+
+        availableSubjects.forEach(subject => {
+            const userScore = parseFloat(data.find(d => d['Student Name'] === userName)?.[subject]) || 0;
+            const allScores = data.map(d => parseFloat(d[subject])).filter(s => !isNaN(s));
+            
+            if (allScores.length === 0) return;
+
+            const avg = allScores.reduce((a, b) => a + b, 0) / allScores.length;
+            const delta = userScore - avg;
+            
+            // Calculate StdDev
+            const squareDiffs = allScores.map(s => Math.pow(s - avg, 2));
+            const stdDev = Math.sqrt(squareDiffs.reduce((a, b) => a + b, 0) / allScores.length);
+            const sigma = stdDev === 0 ? 0 : delta / stdDev;
+
+            // Calculate Rank
+            const sorted = [...allScores].sort((a, b) => b - a);
+            const rank = sorted.indexOf(userScore) + 1;
+
+            results.push({
+                name: subject,
+                you: userScore,
+                avg: avg.toFixed(1),
+                delta: delta.toFixed(1),
+                sigma: sigma.toFixed(2),
+                rank: rank
+            });
+            totalDelta += delta;
+            totalRank += rank;
+        });
+
+        // Update Overall Stats
+        const totalStudents = data.length;
+        const avgRank = totalRank / results.length;
+        const percentile = ((totalStudents - avgRank) / totalStudents * 100).toFixed(1);
+
+        document.getElementById('stat-rank').innerText = Math.round(avgRank);
+        document.getElementById('stat-total').innerText = `out of ${totalStudents}`;
+        document.getElementById('stat-percentile').innerText = percentile + '%';
+        document.getElementById('stat-band').innerText = percentile > 90 ? 'Elite' : percentile > 75 ? 'Top Tier' : 'Active';
+        document.getElementById('stat-delta').innerText = (totalDelta / results.length).toFixed(1);
+        document.getElementById('stat-confidence').innerText = '94%';
+
+        // Update Table
+        const tbody = document.getElementById('perfTableBody');
+        tbody.innerHTML = results.map(r => `
+            <tr>
+                <td class="font-semi">${r.name}</td>
+                <td class="font-bold" style="color:var(--primary)">${r.you}</td>
+                <td>${r.avg}</td>
+                <td><span class="${r.delta >= 0 ? 'text-success' : 'text-danger'} font-semi">${r.delta >= 0 ? '↑ +' : '↓ '}${r.delta}</span></td>
+                <td><span class="${r.sigma >= 0 ? 'text-success' : 'text-danger'}">${r.sigma}σ</span></td>
+                <td><span class="pill muted">#${r.rank}</span></td>
+            </tr>
+        `).join('');
+
+        // Update Chart
+        initChart(
+            results.map(r => r.name.length > 12 ? r.name.slice(0,10)+'...' : r.name),
+            results.map(r => r.you),
+            results.map(r => r.avg)
+        );
+    }
+
+    // Initial empty chart
+    initChart();
+</script>
+{% endblock %}

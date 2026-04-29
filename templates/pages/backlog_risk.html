@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="grid grid-3 stat-card-row mb-4">
+    <div class="stat-card">
+        <span class="label">Subjects At Risk</span>
+        <span class="value text-danger" data-countup="{{ at_risk }}">0</span>
+        <span class="pill danger">High Priority</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Critical Actions</span>
+        <span class="value" data-countup="{{ high_risk }}">0</span>
+        <span class="pill warning">Review Now</span>
+    </div>
+    <div class="stat-card">
+        <span class="label">Recovery Prob.</span>
+        <span class="value text-success" data-countup="{{ avg_recovery_prob }}">0</span>
+        <span class="sub">% Overall Confidence</span>
+    </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 1.5fr 1fr; gap: 20px;">
+    <!-- LEFT: Subject Risk Table -->
+    <div class="card">
+        <div class="section-title mb-4">Subject Risk Analysis</div>
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Current Score</th>
+                        <th>Risk Level</th>
+                        <th>Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="riskTableBody">
+                    <!-- Dynamic rows -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RIGHT: Action Items -->
+    <div class="card">
+        <div class="section-title mb-4">Recovery Action Plan</div>
+        <div class="flex flex-col gap-4">
+            {% for a in actions %}
+            <div class="p-3 border-radius-lg" style="border: 1px solid var(--border-color); background: var(--bg-page);">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="font-bold text-sm">{{ a.title }}</div>
+                        <div class="text-xs text-secondary">{{ a.subject }}</div>
+                    </div>
+                    <span class="pill {% if a.priority == 1 %}danger{% elif a.priority == 2 %}warning{% else %}success{% endif %}">P{{ a.priority }}</span>
+                </div>
+                <div class="text-xs mb-3">{{ a.desc }}</div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semi" style="color:var(--primary);">⏱ {{ a.effort }}</span>
+                    <button class="btn btn-primary" style="padding:4px 12px; font-size:11px;">Mark Done</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const riskData = {{ risk_rows_json|safe }};
+    const tbody = document.getElementById('riskTableBody');
+    
+    tbody.innerHTML = riskData.map(r => `
+        <tr>
+            <td class="font-semi">${r.name}</td>
+            <td>
+                <div class="flex items-center gap-3">
+                    <span style="width:24px;">${r.current}</span>
+                    <div class="progress-bar" style="flex:1;">
+                        <div class="progress-fill" style="width:${r.current}%; background:${r.current < 40 ? '#EF4444' : r.current < 60 ? '#F59E0B' : '#22C55E'}"></div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="pill ${r.level === 'High' ? 'danger' : r.level === 'Medium' ? 'warning' : 'success'}">${r.level}</span></td>
+            <td class="text-xs ${r.trend === 'Declining' ? 'text-danger' : 'text-success'}">${r.trend === 'Declining' ? '▼' : '▲'} ${r.trend}</td>
+        </tr>
+    `).join('');
+</script>
+{% endblock %}
